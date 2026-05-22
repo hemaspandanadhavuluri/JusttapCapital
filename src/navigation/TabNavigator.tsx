@@ -1,13 +1,10 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors } from '../theme/colors';
 
-// Import All Screens
-import LandingScreen from '../screens/LandingScreen';
-import SignupScreen from '../screens/SignupScreen';
-import OTPVerifyScreen from '../screens/OTPVerifyScreen';
+// Authenticated Screen Imports
 import BasicDetailsScreen from '../screens/BasicDetailsScreen';
 import FurtherEducationScreen from '../screens/FurtherEducationScreen';
 import TestScoresScreen from '../screens/TestScoresScreen';
@@ -20,12 +17,10 @@ import IdentityScreen from '../screens/IdentityScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import PrivacyPolicyScreen from '../screens/PrivacyPolicyScreen';
 import TermsOfServiceScreen from '../screens/TermsOfServiceScreen';
-import SupportScreen from '../screens/SupportScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
 
-// Common configuration shared by your forms
 const stackScreenOptions = {
   headerStyle: { backgroundColor: '#FFF' },
   headerTintColor: '#4B2C85',
@@ -33,20 +28,10 @@ const stackScreenOptions = {
   headerBackTitle: ' ',
 };
 
-// --- Home / Onboarding Tab Stack ---
-const HomeStack = () => (
-  <Stack.Navigator initialRouteName="Landing" screenOptions={stackScreenOptions}>
-    <Stack.Screen name="Landing" component={LandingScreen} options={{ headerShown: false }} />
-    <Stack.Screen name="Signup" component={SignupScreen} options={{ headerShown: false }} />
-    <Stack.Screen name="OTPVerify" component={OTPVerifyScreen} options={{ title: 'Verification' }} />
-    <Stack.Screen name="BasicDetails" component={BasicDetailsScreen} options={{ title: 'Personal Details' }} />
-    <Stack.Screen name="Support" component={SupportScreen} options={{ title: 'Help & Support' }} />
-  </Stack.Navigator>
-);
-
-// --- Loans Funnel Tab Stack ---
+// Nested stack running inside the "Loans" Tab
 const LoansStack = () => (
-  <Stack.Navigator initialRouteName="FurtherEducation" screenOptions={stackScreenOptions}>
+  <Stack.Navigator initialRouteName="BasicDetails" screenOptions={stackScreenOptions}>
+    <Stack.Screen name="BasicDetails" component={BasicDetailsScreen} options={{ title: 'Personal Details' }} />
     <Stack.Screen name="FurtherEducation" component={FurtherEducationScreen} options={{ title: 'Loan Details' }} />
     <Stack.Screen name="AcademicExcellence" component={TestScoresScreen} options={{ title: 'Test Scores' }} />
     <Stack.Screen name="StudentDetails" component={StudentDetailsScreen} options={{ title: 'Academic Background' }} />
@@ -58,7 +43,7 @@ const LoansStack = () => (
   </Stack.Navigator>
 );
 
-// --- Documents Tab Stack ---
+// Nested stack running inside the "Documents" Tab
 const DocumentsStack = () => (
   <Stack.Navigator screenOptions={stackScreenOptions}>
     <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} options={{ title: 'Privacy Policy' }} />
@@ -66,31 +51,37 @@ const DocumentsStack = () => (
   </Stack.Navigator>
 );
 
-// --- Profile Tab Stack ---
-const ProfileStack = () => (
-  <Stack.Navigator screenOptions={stackScreenOptions}>
-    <Stack.Screen name="Profile" component={ProfileScreen} options={{ title: 'My Profile' }} />
-  </Stack.Navigator>
-);
-
 const TabNavigator = () => {
+  const insets = useSafeAreaInsets();
+
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
         headerShown: false,
-        tabBarActiveTintColor: '#0F172A', // Dark Navy tone matched from your design files
+        tabBarActiveTintColor: '#0F172A',
         tabBarInactiveTintColor: '#94A3B8',
+        
+        // FIX part 1: Explicitly instruct React Navigation how to handle the safe zone calculation
+        safeAreaInsets: {
+          bottom: insets.bottom,
+        },
+        
+        // FIX part 2: Adaptive style parameters that adapt gracefully to hardware buttons
         tabBarStyle: {
-          height: 75,
-          paddingBottom: 12,
-          paddingTop: 12,
           backgroundColor: '#FFFFFF',
           borderTopWidth: 1,
           borderTopColor: '#E2E8F0',
+          
+          // Dynamically compute the bottom space requirement
+          // If a hardware/software bar exists, use its height + padding; otherwise use a fallback 60px height.
+          height: insets.bottom > 0 ? 60 + insets.bottom : 65,
+          paddingTop: 8,
+          paddingBottom: insets.bottom > 0 ? insets.bottom : 8,
         },
         tabBarLabelStyle: {
           fontSize: 11,
           fontWeight: '700',
+          marginTop: 2,
         },
         tabBarIcon: ({ color }) => {
           let iconName: any;
@@ -103,10 +94,10 @@ const TabNavigator = () => {
         },
       })}
     >
-      <Tab.Screen name="Home" component={HomeStack} />
+      <Tab.Screen name="Home" component={ProfileScreen} />
       <Tab.Screen name="Loans" component={LoansStack} />
       <Tab.Screen name="Documents" component={DocumentsStack} />
-      <Tab.Screen name="Profile" component={ProfileStack} />
+      <Tab.Screen name="Profile" component={ProfileScreen} />
     </Tab.Navigator>
   );
 };

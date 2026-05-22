@@ -13,9 +13,15 @@ const LandingScreen = ({ navigation }: any) => {
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <StatusBar barStyle="dark-content" />
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        contentContainerStyle={[
+          styles.scrollContent, 
+          { paddingBottom: insets.bottom + 20 } // Protects bottom links on Android nav-bar overlays
+        ]} 
+        showsVerticalScrollIndicator={false}
+      >
         
-        {/* Brand Header - Fixed Overlap */}
+        {/* Brand Header */}
         <View style={styles.header}>
            <Image 
              source={require('../../assets/logo.jpeg')} 
@@ -23,7 +29,7 @@ const LandingScreen = ({ navigation }: any) => {
              resizeMode="contain" 
            />
            <TouchableOpacity onPress={() => navigation.navigate('Support')}>
-              <Ionicons name="help-circle-outline" size={26} color={Colors.primary} />
+              <Ionicons name="help-circle-outline" size={26} color={Colors.primary || '#4B2C85'} />
            </TouchableOpacity>
         </View>
 
@@ -35,7 +41,7 @@ const LandingScreen = ({ navigation }: any) => {
           
           <Text style={styles.heroTitle}>
             Welcome to{"\n"}
-            <Text style={{color: Colors.secondary}}>JusttapCapital</Text>{"\n"}
+            <Text style={{color: Colors.secondary || '#FF8A00'}}>JusttapCapital</Text>{"\n"}
             Education Loans
           </Text>
           
@@ -50,13 +56,14 @@ const LandingScreen = ({ navigation }: any) => {
           </View>
         </View>
 
-        {/* Action Buttons with Logo Colors */}
+        {/* Action Buttons */}
         <View style={styles.btnRow}>
           <TouchableOpacity 
             style={[styles.btn, styles.signupBtn]} 
             onPress={() => navigation.navigate('Signup')}
           >
-            <Text style={styles.btnTextWhite}>Signup</Text>
+            {/* Capitalized label for clean UI design */}
+            <Text style={styles.btnTextWhite}>Login</Text>
           </TouchableOpacity>
           
           <TouchableOpacity 
@@ -79,15 +86,17 @@ const LandingScreen = ({ navigation }: any) => {
           </View>
         </View>
 
-        {/* Footer Links */}
+        {/* Footer Links - MATCHED TO APPNAVIGATOR DEAFULTS */}
         <View style={styles.footer}>
           <View style={styles.footerLinksRow}>
             <TouchableOpacity onPress={() => navigation.navigate('PrivacyPolicy')}>
               <Text style={styles.footerLink}>Privacy Policy</Text>
             </TouchableOpacity>
+            
             <TouchableOpacity onPress={() => navigation.navigate('TermsOfService')}>
               <Text style={styles.footerLink}>Terms of Service</Text>
             </TouchableOpacity>
+            
             <TouchableOpacity onPress={() => navigation.navigate('Support')}>
               <Text style={styles.footerLink}>Support</Text>
             </TouchableOpacity>
@@ -101,8 +110,8 @@ const LandingScreen = ({ navigation }: any) => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.white },
-  scrollContent: { paddingHorizontal: 24, paddingBottom: 40 },
+  container: { flex: 1, backgroundColor: Colors.white || '#FFF' },
+  scrollContent: { paddingHorizontal: 24, paddingTop: 10 },
   header: { 
     flexDirection: 'row', 
     justifyContent: 'space-between', 
@@ -113,7 +122,7 @@ const styles = StyleSheet.create({
   logoSmall: { width: 120, height: 40 },
   heroSection: { marginTop: 20 },
   badge: { 
-    backgroundColor: Colors.accentGreen, 
+    backgroundColor: Colors.accentGreen || '#D1FAE5', 
     paddingHorizontal: 12, 
     paddingVertical: 6, 
     borderRadius: 20, 
@@ -137,7 +146,7 @@ const styles = StyleSheet.create({
   },
   quoteBar: { 
     borderLeftWidth: 4, 
-    borderLeftColor: Colors.primary, 
+    borderLeftColor: Colors.primary || '#4B2C85', 
     paddingLeft: 16, 
     marginVertical: 30 
   },
@@ -155,14 +164,14 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
   },
-  signupBtn: { backgroundColor: Colors.secondary },
+  signupBtn: { backgroundColor: Colors.secondary || '#FF8A00' },
   registerBtn: { 
-    backgroundColor: Colors.primary, 
+    backgroundColor: Colors.primary || '#4B2C85', 
     borderWidth: 1.5, 
-    borderColor: Colors.primary 
+    borderColor: Colors.primary || '#4B2C85' 
   },
-  btnTextWhite: { color: Colors.white, fontWeight: '800', fontSize: 16 },
-  btnTextPurple: { color: Colors.white, fontWeight: '800', fontSize: 16 },
+  btnTextWhite: { color: '#FFF', fontWeight: '800', fontSize: 16 },
+  btnTextPurple: { color: '#FFF', fontWeight: '800', fontSize: 16 },
   trustRow: { 
     flexDirection: 'row', 
     justifyContent: 'center', 

@@ -1,63 +1,137 @@
 import React, { useState, useRef } from 'react';
 import { 
   View, Text, TextInput, TouchableOpacity, StyleSheet, 
-  SafeAreaView, ScrollView, KeyboardAvoidingView, Platform, Alert
+  ScrollView, KeyboardAvoidingView, Platform
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context'; // Ensure this is installed
+import { useSafeAreaInsets } from 'react-native-safe-area-context'; 
 import { Colors } from '../theme/colors';
 import { Ionicons } from '@expo/vector-icons';
 
 const OTPVerifyScreen = ({ navigation }: any) => {
-  const insets = useSafeAreaInsets(); // Get bottom notch/nav bar height
+  const insets = useSafeAreaInsets(); 
+  
+  // States for OTP strings
   const [emailOtp, setEmailOtp] = useState(['', '', '', '']);
   const [phoneOtp, setPhoneOtp] = useState(['', '', '', '']);
 
+  // Refs to control focus programmatically
+  const emailRefs = [useRef<TextInput>(null), useRef<TextInput>(null), useRef<TextInput>(null), useRef<TextInput>(null)];
+  const phoneRefs = [useRef<TextInput>(null), useRef<TextInput>(null), useRef<TextInput>(null), useRef<TextInput>(null)];
+
+  // Handles auto-forward jumping
+  const handleOtpChange = (
+    text: string, 
+    index: number, 
+    type: 'email' | 'phone'
+  ) => {
+    const currentOtp = type === 'email' ? [...emailOtp] : [...phoneOtp];
+    const currentRefs = type === 'email' ? emailRefs : phoneRefs;
+    const setOtp = type === 'email' ? setEmailOtp : setPhoneOtp;
+
+    // Take only the last character entered (prevents multi-character bugs)
+    const cleanText = text.slice(-1);
+    currentOtp[index] = cleanText;
+    setOtp(currentOtp);
+
+    // If user typed a number, move to the next box immediately
+    if (cleanText && index < 3) {
+      currentRefs[index + 1].current?.focus();
+    }
+  };
+
+  // Handles backward jumping when pressing Backspace on an empty box
+  const handleKeyPress = (
+    e: any, 
+    index: number, 
+    type: 'email' | 'phone'
+  ) => {
+    const currentOtp = type === 'email' ? emailOtp : phoneOtp;
+    const currentRefs = type === 'email' ? emailRefs : phoneRefs;
+
+    if (e.nativeEvent.key === 'Backspace' && !currentOtp[index] && index > 0) {
+      currentRefs[index - 1].current?.focus();
+    }
+  };
+
+  const handleVerification = () => {
+    navigation.reset({
+      index: 0,
+      routes: [{ name: 'MainTabs' }],
+    });
+  };
+
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       <KeyboardAvoidingView 
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
         style={{ flex: 1 }}
       >
         <ScrollView 
-          contentContainerStyle={[
-            styles.scrollContent, 
-            { paddingBottom: insets.bottom + 40 } // Adds extra space at the very bottom
-          ]}
+          contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
+           keyboardShouldPersistTaps="handled"
         >
-          {/* Header & Progress (Keeping your existing logic) */}
           <View style={styles.header}>
             <Text style={styles.title}>Verification</Text>
           </View>
 
-          {/* Verification Card */}
           <View style={styles.card}>
-            <Text style={styles.sectionLabel}>Email Verification</Text>
+            {/* Email OTP Section */}
+            <View style={styles.labelRow}>
+              <Text style={styles.sectionLabel}>Email Verification</Text>
+              <TouchableOpacity><Text style={styles.resendText}>Resend</Text></TouchableOpacity>
+            </View>
+            
             <View style={styles.otpContainer}>
               {emailOtp.map((digit, index) => (
-                <TextInput key={index} style={styles.otpInput} keyboardType="number-pad" maxLength={1} />
+                <TextInput 
+                  key={`email-${index}`} 
+                  ref={emailRefs[index]}
+                  style={[styles.otpInput, digit ? styles.otpInputActive : null]} 
+                  keyboardType="number-pad" 
+                  maxLength={1}
+                  value={digit}
+                  onChangeText={(text) => handleOtpChange(text, index, 'email')}
+                  onKeyPress={(e) => handleKeyPress(e, index, 'email')}
+                  selectTextOnFocus
+                />
               ))}
             </View>
 
             <View style={styles.divider} />
 
-            <Text style={styles.sectionLabel}>Mobile Verification</Text>
+            {/* Mobile OTP Section */}
+            <View style={styles.labelRow}>
+              <Text style={styles.sectionLabel}>Mobile Verification</Text>
+              <TouchableOpacity><Text style={styles.resendText}>Resend</Text></TouchableOpacity>
+            </View>
+            
             <View style={styles.otpContainer}>
               {phoneOtp.map((digit, index) => (
-                <TextInput key={index} style={styles.otpInput} keyboardType="number-pad" maxLength={1} />
+                <TextInput 
+                  key={`phone-${index}`} 
+                  ref={phoneRefs[index]}
+                  style={[styles.otpInput, digit ? styles.otpInputActive : null]} 
+                  keyboardType="number-pad" 
+                  maxLength={1}
+                  value={digit}
+                  onChangeText={(text) => handleOtpChange(text, index, 'phone')}
+                  onKeyPress={(e) => handleKeyPress(e, index, 'phone')}
+                  selectTextOnFocus
+                />
               ))}
             </View>
 
-            {/* ACTION BUTTON - Fixed Position */}
+            {/* ACTION BUTTON */}
             <TouchableOpacity 
               style={[styles.button, { marginBottom: 20 }]} 
-              onPress={() => navigation.navigate('BasicDetails')}
+              onPress={handleVerification}
             >
               <Text style={styles.buttonText}>Verify & Continue</Text>
               <Ionicons name="arrow-forward" size={20} color="#FFF" />
             </TouchableOpacity>
 
-            {/* Footer Badges inside the card to keep them away from Nav Bar */}
+            {/* Footer Badges */}
             <View style={styles.trustFooter}>
                <View style={styles.trustItem}>
                  <Ionicons name="lock-closed-outline" size={14} color="#666" />
@@ -70,17 +144,20 @@ const OTPVerifyScreen = ({ navigation }: any) => {
             </View>
           </View>
 
+          {/* Spacer to protect from hardware keys overlap */}
+          <View style={{ height: Math.max(insets.bottom, 16) + 30 }} />
+
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
+  container: { flex: 1, backgroundColor: Colors.background || '#F8FAFC' },
   scrollContent: { padding: 20 },
   header: { alignItems: 'center', marginVertical: 20 },
-  title: { fontSize: 28, fontWeight: '800', color: Colors.primary },
+  title: { fontSize: 28, fontWeight: '800', color: Colors.primary || '#4B2C85' },
   card: { 
     backgroundColor: '#FFF', 
     borderRadius: 20, 
@@ -90,7 +167,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1, 
     shadowRadius: 10 
   },
-  sectionLabel: { fontSize: 16, fontWeight: '700', color: '#1A1A1A', marginBottom: 15 },
+  labelRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 },
+  sectionLabel: { fontSize: 16, fontWeight: '700', color: '#1A1A1A' },
+  resendText: { color: '#FF8A00', fontWeight: '700', fontSize: 14 },
   otpContainer: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20 },
   otpInput: { 
     width: '22%', 
@@ -101,11 +180,16 @@ const styles = StyleSheet.create({
     textAlign: 'center', 
     fontSize: 22, 
     fontWeight: '700', 
-    backgroundColor: '#F8FAFC' 
+    backgroundColor: '#F8FAFC',
+    color: '#1A1A1A'
+  },
+  otpInputActive: {
+    borderColor: '#FF8A00', // Highlights orange when filled out matching UI mockup
+    backgroundColor: '#FFF'
   },
   divider: { height: 1, backgroundColor: '#F1F5F9', marginVertical: 20 },
   button: { 
-    backgroundColor: Colors.secondary, 
+    backgroundColor: '#FF8A00', // Styled orange matching your confirmation screen
     height: 58, 
     borderRadius: 12, 
     flexDirection: 'row', 
