@@ -13,6 +13,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'; // Dynamic s
 import { Colors } from '../theme/colors';
 import { useLeadStore } from '../store/useLeadStore';
 import { Ionicons } from '@expo/vector-icons';
+import { useApplicationStore } from '../store/useApplicationStore';
 
 const SignupScreen = ({ navigation }: any) => {
   const insets = useSafeAreaInsets(); // Grabs exact system notch/status-bar height dynamically
@@ -36,7 +37,7 @@ const SignupScreen = ({ navigation }: any) => {
 
   return (
     // FIX: Using View + dynamic safe inset padding top to completely resolve status bar overlaps
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <View style={[styles.container, { paddingTop: insets.top + 12 }]}>
       <KeyboardAvoidingView 
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
         style={{ flex: 1 }}
@@ -179,7 +180,7 @@ const styles = StyleSheet.create({
   progressContainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: 25 },
   stepCircle: { width: 32, height: 32, borderRadius: 16, backgroundColor: '#E2E8F0', justifyContent: 'center', alignItems: 'center' },
   activeStep: { backgroundColor: Colors.primary || '#4B2C85' },
-  progressLine: { width: 80, height: 2, backgroundColor: '#E2E8F0', mx: 10 },
+  progressLine: { width: 80, height: 2, backgroundColor: '#E2E8F0', marginHorizontal: 10 },
   stepTextActive: { color: '#FFF', fontWeight: 'bold', fontSize: 13 },
   stepTextInactive: { color: '#94A3B8', fontWeight: 'bold', fontSize: 13 },
   card: { 

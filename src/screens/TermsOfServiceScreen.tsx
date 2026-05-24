@@ -72,7 +72,7 @@ const styles = StyleSheet.create({
   termsBox: { backgroundColor: '#FFF', borderRadius: 15, padding: 20, borderWidth: 1, borderColor: '#E2E8F0' },
   sectionNumber: { fontSize: 20, fontWeight: '800', color: '#057A55', marginTop: 25 },
   sectionHeader: { color: '#0F172A' },
-  termsContent: { fontSize: 14, color: '#475569', lineHeight: 22, marginTop: 10 },
+  termsContent: { fontSize: 14, color: '#4B2C85', lineHeight: 22, marginTop: 10 },
   footerCard: { marginTop: 20, backgroundColor: '#F1F5F9', padding: 20, borderRadius: 15 },
   checkboxRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 20 },
   checkbox: { width: 22, height: 22, borderWidth: 2, borderColor: '#CBD5E1', borderRadius: 4, backgroundColor: '#FFF', justifyContent: 'center', alignItems: 'center' },
@@ -81,7 +81,7 @@ const styles = StyleSheet.create({
   checkboxLabel: { marginLeft: 12, fontSize: 13, color: '#334155', fontWeight: '600' },
   btnRow: { flexDirection: 'row', justifyContent: 'space-between' },
   declineBtn: { width: '45%', height: 50, borderRadius: 10, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#CBD5E1', backgroundColor: '#FFF' },
-  declineText: { color: '#475569', fontWeight: '700' },
+  declineText: { color: '#4B2C85', fontWeight: '700' },
   acceptBtn: { width: '45%', height: 50, borderRadius: 10, justifyContent: 'center', alignItems: 'center', backgroundColor: '#057A55' },
   acceptText: { color: '#FFF', fontWeight: '700' },
   disabledBtn: { backgroundColor: '#94A3B8' }

@@ -15,7 +15,7 @@
     "ios": {
       "supportsTablet": true
     },
-   "android": {
+    "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/logo.jpeg",
         "backgroundColor": "#4B2C85"
@@ -25,6 +25,9 @@
     },
     "web": {
       "favicon": "./assets/logo.jpeg"
-    }
+    },
+    "plugins": [
+      "@react-native-community/datetimepicker"
+    ]
   }
 }

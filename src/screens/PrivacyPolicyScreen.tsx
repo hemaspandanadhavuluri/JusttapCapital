@@ -70,7 +70,7 @@ const styles = StyleSheet.create({
   sectionCard: { backgroundColor: '#FFF', borderRadius: 12, padding: 16, marginBottom: 15, elevation: 1 },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
   sectionTitle: { fontSize: 18, fontWeight: '700', color: '#1E293B', marginLeft: 10 },
-  sectionText: { fontSize: 14, color: '#475569', lineHeight: 22 },
+  sectionText: { fontSize: 14, color: '#4B2C85', lineHeight: 22 },
   securityBox: { backgroundColor: '#1E293B', borderRadius: 12, padding: 20, marginBottom: 20 },
   row: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
   securityTitle: { color: '#FFF', fontSize: 18, fontWeight: '700', marginLeft: 10 },

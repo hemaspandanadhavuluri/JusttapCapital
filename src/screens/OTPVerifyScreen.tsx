@@ -1,50 +1,44 @@
 import React, { useState, useRef } from 'react';
 import { 
   View, Text, TextInput, TouchableOpacity, StyleSheet, 
-  ScrollView, KeyboardAvoidingView, Platform
+  ScrollView, KeyboardAvoidingView, Platform, Alert, ActivityIndicator
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context'; 
 import { Colors } from '../theme/colors';
 import { Ionicons } from '@expo/vector-icons';
+import { useApplicationStore } from '../store/useApplicationStore';
+import { useLeadStore } from '../store/useLeadStore';
 
 const OTPVerifyScreen = ({ navigation }: any) => {
   const insets = useSafeAreaInsets(); 
   
-  // States for OTP strings
+  // Processing States
+  const [loading, setLoading] = useState(false);
   const [emailOtp, setEmailOtp] = useState(['', '', '', '']);
   const [phoneOtp, setPhoneOtp] = useState(['', '', '', '']);
+  const leadPhone = useLeadStore((state) => state.stepData?.phone);
 
   // Refs to control focus programmatically
   const emailRefs = [useRef<TextInput>(null), useRef<TextInput>(null), useRef<TextInput>(null), useRef<TextInput>(null)];
   const phoneRefs = [useRef<TextInput>(null), useRef<TextInput>(null), useRef<TextInput>(null), useRef<TextInput>(null)];
 
   // Handles auto-forward jumping
-  const handleOtpChange = (
-    text: string, 
-    index: number, 
-    type: 'email' | 'phone'
-  ) => {
+  const handleOtpChange = (text: string, index: number, type: 'email' | 'phone') => {
     const currentOtp = type === 'email' ? [...emailOtp] : [...phoneOtp];
     const currentRefs = type === 'email' ? emailRefs : phoneRefs;
     const setOtp = type === 'email' ? setEmailOtp : setPhoneOtp;
 
-    // Take only the last character entered (prevents multi-character bugs)
     const cleanText = text.slice(-1);
     currentOtp[index] = cleanText;
     setOtp(currentOtp);
 
-    // If user typed a number, move to the next box immediately
     if (cleanText && index < 3) {
       currentRefs[index + 1].current?.focus();
     }
   };
 
   // Handles backward jumping when pressing Backspace on an empty box
-  const handleKeyPress = (
-    e: any, 
-    index: number, 
-    type: 'email' | 'phone'
-  ) => {
+  const handleKeyPress = (e: any, index: number, type: 'email' | 'phone') => {
     const currentOtp = type === 'email' ? emailOtp : phoneOtp;
     const currentRefs = type === 'email' ? emailRefs : phoneRefs;
 
@@ -53,11 +47,67 @@ const OTPVerifyScreen = ({ navigation }: any) => {
     }
   };
 
-  const handleVerification = () => {
-    navigation.reset({
-      index: 0,
-      routes: [{ name: 'MainTabs' }],
-    });
+  /**
+   * OPTIMIZED ROUTING GUARD PIPELINE VERIFICATION HANDLER
+   */
+  const handleVerification = async () => {
+    const targetPhoneOtp = phoneOtp.join('');
+    const targetEmailOtp = emailOtp.join('');
+
+    if (targetPhoneOtp.length < 4 || targetEmailOtp.length < 4) {
+      Alert.alert("Incomplete Entries", "Please completely populate all validation boxes before proceeding.");
+      return;
+    }
+
+    const verifiedPhoneString = leadPhone || "+919999999999"; 
+
+    setLoading(true);
+    try {
+      const response = await fetch(`http://10.73.10.17:5000/api/app-onboarding/check-status?phoneNumber=${encodeURIComponent(verifiedPhoneString)}`);
+      const data = await response.json();
+
+      if (data.exists) {
+        // Hydrate backend properties securely without allowing lower step rollbacks
+        useApplicationStore.getState().hydrateFromBackend({
+          leadId: data.leadID,
+          currentStep: data.resumeStep, 
+          assignedFO: data.assignedFO
+        });
+        
+        navigation.replace('MainTabs');
+      } else {
+        // Pristine profile entry path: Only reset store if the server explicitly tells us this profile is brand new
+        useApplicationStore.getState().resetStore();
+        useApplicationStore.getState().updateStepData('basicDetails', { phones: [verifiedPhoneString] });
+        navigation.replace('MainTabs');
+      }
+    } catch (error: any) {
+      console.log("Routing Guard Interaction Interruption caught safely:", error.message);
+      
+      // READ EXISTING CLIENT STEP PERSISTENCE DATA
+      const localSavedStep = useApplicationStore.getState().currentStep;
+
+      // Safe Network Interruption Handler
+      Alert.alert(
+        "Network Interruption",
+        `Could not connect to authentication servers. Proceeding using local progress state (Step ${localSavedStep}).`,
+        [
+          { text: "Retry Connection", style: "cancel", onPress: () => setLoading(false) },
+          { 
+            text: "Continue Offline", 
+            onPress: () => {
+              // FIX: Wiped out "resetStore()". We preserve all cached inputs and jump right in!
+              if (!useApplicationStore.getState().basicDetails?.phones) {
+                useApplicationStore.getState().updateStepData('basicDetails', { phones: [verifiedPhoneString] });
+              }
+              navigation.replace('MainTabs');
+            } 
+          }
+        ]
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -69,7 +119,7 @@ const OTPVerifyScreen = ({ navigation }: any) => {
         <ScrollView 
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
-           keyboardShouldPersistTaps="handled"
+          keyboardShouldPersistTaps="handled"
         >
           <View style={styles.header}>
             <Text style={styles.title}>Verification</Text>
@@ -94,6 +144,7 @@ const OTPVerifyScreen = ({ navigation }: any) => {
                   onChangeText={(text) => handleOtpChange(text, index, 'email')}
                   onKeyPress={(e) => handleKeyPress(e, index, 'email')}
                   selectTextOnFocus
+                  editable={!loading}
                 />
               ))}
             </View>
@@ -118,17 +169,25 @@ const OTPVerifyScreen = ({ navigation }: any) => {
                   onChangeText={(text) => handleOtpChange(text, index, 'phone')}
                   onKeyPress={(e) => handleKeyPress(e, index, 'phone')}
                   selectTextOnFocus
+                  editable={!loading}
                 />
               ))}
             </View>
 
-            {/* ACTION BUTTON */}
+            {/* ACTION BUTTON WITH CONDITIONAL LOADING ANIMATION */}
             <TouchableOpacity 
-              style={[styles.button, { marginBottom: 20 }]} 
+              style={[styles.button, { marginBottom: 20 }, loading && styles.buttonDisabled]} 
               onPress={handleVerification}
+              disabled={loading}
             >
-              <Text style={styles.buttonText}>Verify & Continue</Text>
-              <Ionicons name="arrow-forward" size={20} color="#FFF" />
+              {loading ? (
+                <ActivityIndicator size="small" color="#FFF" />
+              ) : (
+                <>
+                  <Text style={styles.buttonText}>Verify & Continue</Text>
+                  <Ionicons name="arrow-forward" size={20} color="#FFF" />
+                </>
+              )}
             </TouchableOpacity>
 
             {/* Footer Badges */}
@@ -144,7 +203,6 @@ const OTPVerifyScreen = ({ navigation }: any) => {
             </View>
           </View>
 
-          {/* Spacer to protect from hardware keys overlap */}
           <View style={{ height: Math.max(insets.bottom, 16) + 30 }} />
 
         </ScrollView>
@@ -184,18 +242,21 @@ const styles = StyleSheet.create({
     color: '#1A1A1A'
   },
   otpInputActive: {
-    borderColor: '#FF8A00', // Highlights orange when filled out matching UI mockup
+    borderColor: '#FF8A00', 
     backgroundColor: '#FFF'
   },
   divider: { height: 1, backgroundColor: '#F1F5F9', marginVertical: 20 },
   button: { 
-    backgroundColor: '#FF8A00', // Styled orange matching your confirmation screen
+    backgroundColor: '#FF8A00', 
     height: 58, 
     borderRadius: 12, 
     flexDirection: 'row', 
     justifyContent: 'center', 
     alignItems: 'center', 
     marginTop: 10 
+  },
+  buttonDisabled: {
+    backgroundColor: '#CBD5E1'
   },
   buttonText: { color: '#FFF', fontSize: 18, fontWeight: '700', marginRight: 10 },
   trustFooter: { 

@@ -1,49 +1,35 @@
 import React from 'react';
-import { NavigationContainer } from '@react-navigation/native';
-import { createStackNavigator } from '@react-navigation/stack';
-import TabNavigator from './TabNavigator';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
-// Import Entrance Context Screens
+// Root Auth Stack Screens
 import LandingScreen from '../screens/LandingScreen';
 import SignupScreen from '../screens/SignupScreen';
 import OTPVerifyScreen from '../screens/OTPVerifyScreen';
 import SupportScreen from '../screens/SupportScreen';
-import PrivacyPolicyScreen from '../screens/PrivacyPolicyScreen';
 import TermsOfServiceScreen from '../screens/TermsOfServiceScreen';
+import PrivacyPolicyScreen from '../screens/PrivacyPolicyScreen';
 
-const Stack = createStackNavigator();
+// Core Application Navigation Shell
+import { MainTabNavigator } from './MainTabNavigator';
+import { WizardContainer } from '../screens/WizardContainer';
 
-const AppNavigator = () => {
+const Stack = createNativeStackNavigator();
+
+export default function AppNavigator() {
   return (
-    <NavigationContainer>
-      <Stack.Navigator 
-        initialRouteName="Landing"
-        screenOptions={{
-          headerStyle: { backgroundColor: '#FFF' },
-          headerTintColor: '#4B2C85',
-          headerTitleStyle: { fontWeight: 'bold' },
-          headerBackTitle: ' ',
-        }}
-      >
-        {/* Core Auth Screens */}
-        <Stack.Screen name="Landing" component={LandingScreen} options={{ headerShown: false }} />
-        <Stack.Screen name="Signup" component={SignupScreen} options={{ headerShown: false }} />
-        <Stack.Screen name="OTPVerify" component={OTPVerifyScreen} options={{ title: 'Verification' }} />
-        
-        {/* Helper Legal and Support Utility Screens */}
-        <Stack.Screen name="Support" component={SupportScreen} options={{ title: 'Help & Support' }} />
-        <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} options={{ title: 'Privacy Policy' }} />
-        <Stack.Screen name="TermsOfService" component={TermsOfServiceScreen} options={{ title: 'Terms of Service' }} />
+    <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName="Landing">
+      {/* Pre-auth Pipeline Stack */}
+      <Stack.Screen name="Landing" component={LandingScreen} />
+      <Stack.Screen name="Signup" component={SignupScreen} />
+      <Stack.Screen name="OTPVerify" component={OTPVerifyScreen} />
 
-        {/* Core Secure System Entrance (INCLUDES FIXED FOOTER BAR) */}
-        <Stack.Screen 
-          name="MainTabs" 
-          component={TabNavigator} 
-          options={{ headerShown: false, gestureEnabled: false }} 
-        />
-      </Stack.Navigator>
-    </NavigationContainer>
+      {/* Support & Legal Stack */}
+      <Stack.Screen name="Support" component={SupportScreen} options={{ headerShown: true, title: 'Support' }} />
+      <Stack.Screen name="TermsOfService" component={TermsOfServiceScreen} options={{ headerShown: true, title: 'Terms of Service' }} />
+      <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} options={{ headerShown: true, title: 'Privacy Policy' }} />
+
+      {/* Main Tabbed Home Interface */}
+      <Stack.Screen name="MainTabs" component={MainTabNavigator} />
+    </Stack.Navigator>
   );
-};
-
-export default AppNavigator;
+}

@@ -4,8 +4,9 @@ import {
   ScrollView, StatusBar 
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Colors } from '../theme/colors';
+import { PARTNER_BANKS } from '../components/forms/appConstants';
 
 const LandingScreen = ({ navigation }: any) => {
   const insets = useSafeAreaInsets();
@@ -35,6 +36,11 @@ const LandingScreen = ({ navigation }: any) => {
 
         {/* Hero Section */}
         <View style={styles.heroSection}>
+          <Image 
+             source={require('../../assets/logo.jpeg')} 
+             style={styles.heroLogo} 
+             resizeMode="contain" 
+          />
           <View style={styles.badge}>
             <Text style={styles.badgeText}>Global Academic Success</Text>
           </View>
@@ -72,6 +78,19 @@ const LandingScreen = ({ navigation }: any) => {
           >
             <Text style={styles.btnTextPurple}>Register</Text>
           </TouchableOpacity>
+        </View>
+
+        {/* Banking Partners Trust Section */}
+        <View style={styles.partnersSection}>
+          <Text style={styles.partnersTitle}>Our Lending Partners</Text>
+          <View style={styles.partnersGrid}>
+            {PARTNER_BANKS.map((bank, index) => (
+              <View key={index} style={styles.partnerLogoPlaceholder}>
+                <MaterialCommunityIcons name="bank-outline" size={18} color="#4B2C85" />
+                <Text style={styles.partnerText}>{bank}</Text>
+              </View>
+            ))}
+          </View>
         </View>
 
         {/* Trust Indicators */}
@@ -117,12 +136,14 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between', 
     alignItems: 'center', 
     height: 60,
-    marginBottom: 10
+    marginBottom: 10,
+    paddingHorizontal: 0
   },
-  logoSmall: { width: 120, height: 40 },
+  logoSmall: { width: 50, height: 50 },
   heroSection: { marginTop: 20 },
+  heroLogo: { width: 80, height: 80, marginBottom: 20 },
   badge: { 
-    backgroundColor: Colors.accentGreen || '#D1FAE5', 
+    backgroundColor: '#D1FAE5', 
     paddingHorizontal: 12, 
     paddingVertical: 6, 
     borderRadius: 20, 
@@ -179,7 +200,13 @@ const styles = StyleSheet.create({
     marginVertical: 40 
   },
   trustItem: { flexDirection: 'row', alignItems: 'center' },
-  trustText: { fontSize: 14, color: '#475569', fontWeight: '600', marginLeft: 8 },
+  trustText: { fontSize: 14, color: '#4B2C85', fontWeight: '600', marginLeft: 8 },
+  
+  partnersSection: { marginTop: 30, marginBottom: 10 },
+  partnersTitle: { fontSize: 18, fontWeight: '800', color: '#4B2C85', marginBottom: 15, textAlign: 'center' },
+  partnersGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 10 },
+  partnerLogoPlaceholder: { backgroundColor: '#F8FAFC', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, borderWidth: 1, borderColor: '#E2E8F0', flexDirection: 'row', alignItems: 'center', gap: 6 },
+  partnerText: { fontSize: 11, fontWeight: '700', color: '#4B2C85' },
   footer: { 
     marginTop: 20, 
     borderTopWidth: 1, 
