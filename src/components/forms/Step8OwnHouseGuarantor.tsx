@@ -33,7 +33,8 @@ export const Step8OwnHouseGuarantor = ({ onSave, onBack }: { onSave: (data: any)
   const [loading, setLoading] = useState(false);
 
   // Local state for the guarantor selection
-  const [selectedSource, setSelectedSource] = useState<string | number>(storeData.relationId || '');
+  // If name exists but no relationId, it means it was a manual entry from DB
+  const [selectedSource, setSelectedSource] = useState<string | number>(storeData.relationId || (storeData.name ? 'manual' : ''));
   const [manualData, setManualData] = useState({
     name: storeData.name || '',
     relationshipType: storeData.relationshipType || '',

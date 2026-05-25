@@ -9,12 +9,20 @@ export const Step3TestScores = ({ onSave, onBack }: { onSave: (data: any) => Pro
   const storeData = rawStoreData || {};
 
   const [loading, setLoading] = useState(false);
-  const [englishTestType, setEnglishTestType] = useState('IELTS');
   
-  // Read initial properties using both possible schemas (lowercase or camelCase)
-  const [englishScore, setEnglishScore] = useState(storeData.ielts || storeData.englishScore || '');
-  const [entranceTestType, setEntranceTestType] = useState('GRE');
-  const [entranceScore, setEntranceScore] = useState(storeData.gre || storeData.entranceScore || '');
+  // Derive active test types from existing data
+  const [englishTestType, setEnglishTestType] = useState(() => {
+    if (storeData.TOEFL) return 'TOEFL';
+    if (storeData.PTE) return 'PTE';
+    return 'IELTS';
+  });
+  
+  // Normalize Uppercase keys from DB
+  const [englishScore, setEnglishScore] = useState(storeData.IELTS || storeData.TOEFL || storeData.PTE || '');
+  const [entranceTestType, setEntranceTestType] = useState(() => {
+    return storeData.GMAT ? 'GMAT' : 'GRE';
+  });
+  const [entranceScore, setEntranceScore] = useState(storeData.GRE || storeData.GMAT || '');
 
   const handleSubmit = async () => {
     setLoading(true);

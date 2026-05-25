@@ -8,19 +8,21 @@ import { Colors } from '../theme/colors';
 import { Ionicons } from '@expo/vector-icons';
 import { useApplicationStore } from '../store/useApplicationStore';
 import { useLeadStore } from '../store/useLeadStore';
+import { ENDPOINTS } from '../config/apiConfig';
 
 const OTPVerifyScreen = ({ navigation }: any) => {
   const insets = useSafeAreaInsets(); 
   
   // Processing States
   const [loading, setLoading] = useState(false);
-  const [emailOtp, setEmailOtp] = useState(['', '', '', '']);
-  const [phoneOtp, setPhoneOtp] = useState(['', '', '', '']);
+  const [emailOtp, setEmailOtp] = useState(['', '', '', '', '', '']);
+  const [phoneOtp, setPhoneOtp] = useState(['', '', '', '', '', '']);
+  const leadEmail = useLeadStore((state) => state.stepData?.email);
   const leadPhone = useLeadStore((state) => state.stepData?.phone);
 
   // Refs to control focus programmatically
-  const emailRefs = [useRef<TextInput>(null), useRef<TextInput>(null), useRef<TextInput>(null), useRef<TextInput>(null)];
-  const phoneRefs = [useRef<TextInput>(null), useRef<TextInput>(null), useRef<TextInput>(null), useRef<TextInput>(null)];
+  const emailRefs = [useRef<TextInput>(null), useRef<TextInput>(null), useRef<TextInput>(null), useRef<TextInput>(null), useRef<TextInput>(null), useRef<TextInput>(null)];
+  const phoneRefs = [useRef<TextInput>(null), useRef<TextInput>(null), useRef<TextInput>(null), useRef<TextInput>(null), useRef<TextInput>(null), useRef<TextInput>(null)];
 
   // Handles auto-forward jumping
   const handleOtpChange = (text: string, index: number, type: 'email' | 'phone') => {
@@ -32,7 +34,7 @@ const OTPVerifyScreen = ({ navigation }: any) => {
     currentOtp[index] = cleanText;
     setOtp(currentOtp);
 
-    if (cleanText && index < 3) {
+    if (cleanText && index < 5) {
       currentRefs[index + 1].current?.focus();
     }
   };
@@ -47,6 +49,21 @@ const OTPVerifyScreen = ({ navigation }: any) => {
     }
   };
 
+  const handleResendEmailOtp = async () => {
+    if (!leadEmail) return;
+    
+    try {
+      await fetch(ENDPOINTS.RESEND_OTP, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: leadEmail })
+      });
+      Alert.alert("Code Sent", "A new verification code has been sent to your email.");
+    } catch (e) {
+      Alert.alert("Error", "Failed to resend code. Please check your internet connection.");
+    }
+  };
+
   /**
    * OPTIMIZED ROUTING GUARD PIPELINE VERIFICATION HANDLER
    */
@@ -54,7 +71,7 @@ const OTPVerifyScreen = ({ navigation }: any) => {
     const targetPhoneOtp = phoneOtp.join('');
     const targetEmailOtp = emailOtp.join('');
 
-    if (targetPhoneOtp.length < 4 || targetEmailOtp.length < 4) {
+    if (targetPhoneOtp.length < 6 || targetEmailOtp.length < 6) {
       Alert.alert("Incomplete Entries", "Please completely populate all validation boxes before proceeding.");
       return;
     }
@@ -63,23 +80,23 @@ const OTPVerifyScreen = ({ navigation }: any) => {
 
     setLoading(true);
     try {
-      const response = await fetch(`http://10.73.10.17:5000/api/app-onboarding/check-status?phoneNumber=${encodeURIComponent(verifiedPhoneString)}`);
+      const response = await fetch(ENDPOINTS.VERIFY_OTP, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: leadEmail?.toLowerCase().trim(),
+          otp: targetEmailOtp // Using Email OTP for verification
+        })
+      });
+      
       const data = await response.json();
 
-      if (data.exists) {
-        // Hydrate backend properties securely without allowing lower step rollbacks
-        useApplicationStore.getState().hydrateFromBackend({
-          leadId: data.leadID,
-          currentStep: data.resumeStep, 
-          assignedFO: data.assignedFO
-        });
+      if (response.ok && data.leadID) {
+        useApplicationStore.getState().hydrateFromBackend(data.fullProfile);
         
         navigation.replace('MainTabs');
       } else {
-        // Pristine profile entry path: Only reset store if the server explicitly tells us this profile is brand new
-        useApplicationStore.getState().resetStore();
-        useApplicationStore.getState().updateStepData('basicDetails', { phones: [verifiedPhoneString] });
-        navigation.replace('MainTabs');
+        Alert.alert("Verification Failed", data.error || "The code you entered is incorrect.");
       }
     } catch (error: any) {
       console.log("Routing Guard Interaction Interruption caught safely:", error.message);
@@ -113,8 +130,9 @@ const OTPVerifyScreen = ({ navigation }: any) => {
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <KeyboardAvoidingView 
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined} 
         style={{ flex: 1 }}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
       >
         <ScrollView 
           contentContainerStyle={styles.scrollContent}
@@ -129,7 +147,9 @@ const OTPVerifyScreen = ({ navigation }: any) => {
             {/* Email OTP Section */}
             <View style={styles.labelRow}>
               <Text style={styles.sectionLabel}>Email Verification</Text>
-              <TouchableOpacity><Text style={styles.resendText}>Resend</Text></TouchableOpacity>
+              <TouchableOpacity onPress={handleResendEmailOtp}>
+                <Text style={styles.resendText}>Resend</Text>
+              </TouchableOpacity>
             </View>
             
             <View style={styles.otpContainer}>
@@ -230,13 +250,13 @@ const styles = StyleSheet.create({
   resendText: { color: '#FF8A00', fontWeight: '700', fontSize: 14 },
   otpContainer: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20 },
   otpInput: { 
-    width: '22%', 
-    height: 55, 
+    width: '14%', 
+    height: 50, 
     borderWidth: 1.5, 
     borderColor: '#E2E8F0', 
     borderRadius: 12, 
     textAlign: 'center', 
-    fontSize: 22, 
+    fontSize: 20, 
     fontWeight: '700', 
     backgroundColor: '#F8FAFC',
     color: '#1A1A1A'

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, ActivityIndicator } from 'react-native';
 import { Dropdown } from 'react-native-element-dropdown';
 import { Ionicons } from '@expo/vector-icons';
@@ -49,6 +49,11 @@ export const Step9References = ({ onSave, onBack }: { onSave: (data: any) => Pro
   
   const [ref1, setRef1] = useState(storeData[0] || { name: '', relationship: '', phoneNumber: '', address: '' });
   const [ref2, setRef2] = useState(storeData[1] || { name: '', relationship: '', phoneNumber: '', address: '' });
+
+  useEffect(() => {
+    if (storeData[0]) setRef1(storeData[0]);
+    if (storeData[1]) setRef2(storeData[1]);
+  }, [rawStoreData]);
 
   const handleSubmit = async () => {
     if (!ref1.name || !ref1.phoneNumber || !ref2.name || !ref2.phoneNumber) {

@@ -14,7 +14,7 @@ export const Step4AcademicHistory = ({ onSave, onBack }: { onSave: (data: any) =
   const [loading, setLoading] = useState(false);
   const [age, setAge] = useState(storeData.age || '');
   const [panNumber, setPanNumber] = useState(storeData.panNumber || '');
-  const [hasWorkExp, setHasWorkExp] = useState(storeData.hasWorkExp || 'No');
+  const [hasWorkExp, setHasWorkExp] = useState((storeData.workExpMonths && storeData.workExpMonths !== '0' && storeData.workExpMonths !== '') ? 'Yes' : 'No');
   const [workExpMonths, setWorkExpMonths] = useState(storeData.workExpMonths || '');
   const [undergradCollege, setUndergradCollege] = useState(storeData.undergradCollege || '');
   const [undergradMajor, setUndergradMajor] = useState(storeData.undergradMajor || '');

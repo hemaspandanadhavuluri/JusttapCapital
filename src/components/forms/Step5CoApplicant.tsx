@@ -28,9 +28,15 @@ export const Step7StudentRelations = ({ onSave, onBack }: { onSave: (data: any) 
   const storeData = rawStoreData || {};
 
   const [loading, setLoading] = useState(false);
-  const [relations, setRelations] = useState<any[]>(storeData.relations || [
-    { id: Date.now(), relationshipType: 'Father', name: '', employmentType: 'Salaried', annualIncome: '', phoneNumber: '', currentObligations: '', cibilIssues: '', isCoApplicant: true }
-  ]);
+  const [relations, setRelations] = useState<any[]>(() => {
+    if (storeData.relations && Array.isArray(storeData.relations) && storeData.relations.length > 0) {
+      // Ensure every relation has a unique ID for the key prop
+      return storeData.relations.map((r: any, idx: number) => ({ ...r, id: r.id || `saved-${idx}` }));
+    }
+    return [
+      { id: Date.now(), relationshipType: 'Father', name: '', employmentType: 'Salaried', annualIncome: '', phoneNumber: '', currentObligations: '', cibilIssues: '', isCoApplicant: true }
+    ];
+  });
 
   const addRelation = () => {
     setRelations([...relations, { id: Date.now(), relationshipType: '', name: '', employmentType: 'Salaried', annualIncome: '', phoneNumber: '', currentObligations: '', cibilIssues: '', isCoApplicant: false }]);

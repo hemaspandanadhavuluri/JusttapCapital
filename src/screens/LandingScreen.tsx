@@ -36,11 +36,7 @@ const LandingScreen = ({ navigation }: any) => {
 
         {/* Hero Section */}
         <View style={styles.heroSection}>
-          <Image 
-             source={require('../../assets/logo.jpeg')} 
-             style={styles.heroLogo} 
-             resizeMode="contain" 
-          />
+      
           <View style={styles.badge}>
             <Text style={styles.badgeText}>Global Academic Success</Text>
           </View>

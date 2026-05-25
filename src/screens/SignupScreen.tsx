@@ -7,32 +7,64 @@ import {
   StyleSheet, 
   ScrollView,
   KeyboardAvoidingView,
-  Platform 
+  Platform,
+  Alert,
+  ActivityIndicator
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context'; // Dynamic safe space inset engine
 import { Colors } from '../theme/colors';
 import { useLeadStore } from '../store/useLeadStore';
 import { Ionicons } from '@expo/vector-icons';
 import { useApplicationStore } from '../store/useApplicationStore';
+import axios from 'axios';
+import { ENDPOINTS } from '../config/apiConfig';
 
 const SignupScreen = ({ navigation }: any) => {
   const insets = useSafeAreaInsets(); // Grabs exact system notch/status-bar height dynamically
   const setStepData = useLeadStore((state) => state.setStepData);
   
+  const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({
     fullName: '',
     email: '',
     phone: ''
   });
 
-  const handleSendOTP = () => {
+  const handleSendOTP = async () => {
+    if (loading) return;
+
     if (!form.fullName || !form.email || !form.phone) {
-      alert("Please fill all fields");
+      Alert.alert("Error", "Please fill all fields");
       return;
     }
-    
-    setStepData(form);
-    navigation.navigate('OTPVerify'); 
+
+    setLoading(true);
+    try {
+      // Trimming and lowercasing email to ensure consistency with OTP lookup
+      const payload = {
+        ...form,
+        email: form.email.toLowerCase().trim()
+      };
+
+      const response = await axios.post(ENDPOINTS.REGISTER, payload);
+      
+      if (!response.data.exists) {
+        useApplicationStore.getState().updateStepData('basicDetails', { 
+          fullName: form.fullName,
+          email: form.email,
+          phones: [form.phone]
+        });
+      }
+      useApplicationStore.getState().setStepPointer(response.data.currentStep || 1);
+
+      setStepData(form);
+      navigation.navigate('OTPVerify'); 
+    } catch (error) {
+      setLoading(false);
+      console.error("Registration sync failed:", error.response?.data || error.message);
+      const errorMessage = error.response?.data?.details || error.response?.data?.error || error.message;
+      Alert.alert("Registration Failed", errorMessage);
+    }
   };
 
   return (
@@ -117,9 +149,19 @@ const SignupScreen = ({ navigation }: any) => {
               />
             </View>
 
-            <TouchableOpacity style={styles.button} onPress={handleSendOTP}>
-              <Text style={styles.buttonText}>Send OTP</Text>
-              <Ionicons name="arrow-forward" size={20} color="#FFF" />
+            <TouchableOpacity 
+              style={[styles.button, loading && { opacity: 0.7 }]} 
+              onPress={handleSendOTP}
+              disabled={loading}
+            >
+              {loading ? (
+                <ActivityIndicator color="#FFF" />
+              ) : (
+                <>
+                  <Text style={styles.buttonText}>Send OTP</Text>
+                  <Ionicons name="arrow-forward" size={20} color="#FFF" />
+                </>
+              )}
             </TouchableOpacity>
           </View>
 

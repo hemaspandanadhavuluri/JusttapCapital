@@ -4,6 +4,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { useApplicationStore } from '../store/useApplicationStore';
 import { Ionicons } from '@expo/vector-icons';
+import axios from 'axios';
+import { ENDPOINTS } from '../config/apiConfig';
 
 // Component Step Form Imports
 import { Step1BasicDetails } from '../components/forms/Step1BasicDetails';
@@ -20,13 +22,25 @@ export const WizardContainer = () => {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
   const currentStep = useApplicationStore((state) => state.currentStep);
+  const leadId = useApplicationStore((state: any) => state.leadId || state.basicDetails?.leadId);
   const setStepPointer = useApplicationStore((state) => state.setStepPointer);
   const updateStepData = useApplicationStore((state) => state.updateStepData);
 
 const handleSaveAndNext = async (storeKey: string, data: any) => {
   try {
     updateStepData(storeKey, data);
+
+    // Sync progress to backend
+    const response = await axios.patch(ENDPOINTS.SYNC(leadId), { 
+      [storeKey]: data, 
+      currentStep: currentStep + 1 
+    });
     
+    // Update store with the full object from server (contains assigned FO, etc.)
+    if (response.data) {
+      useApplicationStore.getState().updateStepData('serverData', response.data);
+    }
+
     if (currentStep === 9) {
       // Flag complete within local state dictionary store
       useApplicationStore.getState().updateStepData('isProfileComplete', true);

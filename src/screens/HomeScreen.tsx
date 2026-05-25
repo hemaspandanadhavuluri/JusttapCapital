@@ -2,28 +2,105 @@
 import React from 'react';
 import { 
   View, Text, StyleSheet, ScrollView, TouchableOpacity, 
-  Image, StatusBar, Dimensions, Alert 
+  Image, StatusBar, Dimensions, Alert, ActivityIndicator, Linking
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons, Feather, MaterialCommunityIcons } from '@expo/vector-icons';
+import * as DocumentPicker from 'expo-document-picker';
 import { useApplicationStore } from '../store/useApplicationStore';
 import { PARTNER_BANKS } from '../components/forms/appConstants';
 import { Colors } from '../theme/colors';
+import axios from 'axios';
+import { ENDPOINTS, API_BASE_URL } from '../config/apiConfig';
 
 const { width } = Dimensions.get('window');
+const DOCUMENT_TYPES = [
+  "Student Aadhar", "Student PAN Card", "Student Passport Size Photo", "Student Passport",
+  "Student 10th Class Certificate", "Student 12th Degree Certificate", "Student UG Marksheet",
+  "Student Test Score Cards", "Student Admission Letter", "Student Work Experience Letter", "Student Visa"
+];
 
 export default function HomeScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
   
+  const [uploading, setUploading] = React.useState(false);
   // Dynamic application lifecycle hooks
   const currentStep = useApplicationStore((state) => state.currentStep);
   const isProfileComplete = useApplicationStore((state) => state.isProfileComplete);
-  const studentName = useApplicationStore((state: any) => state.studentName) || 'Aryan';
+  const leadId = useApplicationStore((state: any) => state.leadId || state.basicDetails?.leadId);
+  const documents = useApplicationStore((state: any) => state.documents) || [];
+  
+  // Read dynamic data from store instead of hardcoded values
+  const serverData = useApplicationStore((state: any) => state.serverData) || {};
+  const localFullName = useApplicationStore((state: any) => state.basicDetails?.fullName);
+  const studentName = serverData.fullName || localFullName || 'Applicant';
+  const assignedFO = serverData.assignedFO || 'Assigning Officer...';
+  const leadStatus = serverData.leadStatus || 'New Application';
+
+  // Sync with database on mount to refresh status and FO details
+  React.useEffect(() => {
+    if (leadId) {
+      const refreshStatus = async () => {
+        try {
+          const res = await axios.get(ENDPOINTS.STATUS(leadId));
+          useApplicationStore.getState().updateStepData('serverData', res.data);
+        } catch (e) {
+          console.log("Status refresh failed", e);
+        }
+      };
+      refreshStatus();
+    }
+  }, [leadId]);
 
   // Fallback Theme Tokens to support missing color references safely
   const PRIMARY_COLOR = Colors?.primary || '#0A2540';
   const ACCENT_GREEN = Colors?.secondary || '#00D68F';
   const BRAND_PURPLE = '#4B2C85';
+
+  const handleDocumentPick = async (docType: string) => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: ['image/*', 'application/pdf'],
+        copyToCacheDirectory: true,
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const file = result.assets[0];
+        
+        if (!leadId) {
+          Alert.alert("Session Error", "Lead ID not found. Please try logging in again.");
+          return;
+        }
+
+        setUploading(true);
+        
+        const formData = new FormData();
+        const fileUri = Platform.OS === 'android' ? file.uri : file.uri.replace('file://', '');
+
+        formData.append('document', {
+          uri: fileUri,
+          name: file.name || `upload_${Date.now()}.pdf`,
+          type: file.mimeType || 'application/octet-stream',
+        } as any);
+        formData.append('documentType', docType);
+
+        // FIX: Ensure consistency with DocumentsScreen upload
+        const response = await axios.post(ENDPOINTS.UPLOAD_DOCUMENT(leadId), formData, {
+          transformRequest: (data) => data,
+        });
+
+        if (response.data) {
+          useApplicationStore.getState().updateStepData('documents', response.data.documents || []);
+          Alert.alert("Success", `${docType} uploaded successfully.`);
+        }
+      }
+    } catch (error: any) {
+      console.error("Home Upload Error:", error.response?.data || error.message);
+      Alert.alert("Error", "Failed to upload document. Please check the logs.");
+    } finally {
+      setUploading(false);
+    }
+  };
 
   /**
    * STATE A: Brand New Install / Fresh Profile Layout
@@ -47,7 +124,7 @@ export default function HomeScreen({ navigation }: any) {
       showsVerticalScrollIndicator={false}
       contentContainerStyle={styles.scrollContainer}
     >
-      <Text style={styles.welcomeHeading}>Welcome to{"\n"}JusttapCapital!</Text>
+      <Text style={styles.welcomeHeading}>Welcome, {studentName}!{"\n"}To JusttapCapital</Text>
       <Text style={styles.welcomeSubheading}>
         Your journey to academic excellence starts here. Let's get your profile set up to unlock personalized loan offers.
       </Text>
@@ -217,9 +294,9 @@ export default function HomeScreen({ navigation }: any) {
           <View style={styles.loanStatusBadge}>
             <Text style={styles.loanStatusBadgeText}>Loan Status</Text>
           </View>
-          <Text style={styles.loanStatusMainHeader}>Documents Verified</Text>
+          <Text style={styles.loanStatusMainHeader}>{leadStatus}</Text>
           <Text style={styles.loanStatusBodyDesc}>
-            Our underwriters have completed the review of your academic and financial records. Your application is now in the final collateral assessment stage.
+            Your application is currently being processed. You can contact your Field Officer for real-time updates regarding your file.
           </Text>
           <TouchableOpacity style={[styles.getStartedButton, { backgroundColor: ACCENT_GREEN, marginTop: 10, height: 46 }]}>
             <Text style={[styles.getStartedBtnText, { color: '#0A192F' }]}>View Details</Text>
@@ -235,7 +312,7 @@ export default function HomeScreen({ navigation }: any) {
               style={styles.officerAvatarImage} 
             />
             <View style={styles.officerNameBlock}>
-              <Text style={styles.officerNameText}>Vikram Malhotra</Text>
+              <Text style={styles.officerNameText}>{assignedFO}</Text>
               <Text style={styles.officerTitleSubtext}>Dedicated Field Executive</Text>
               <Text style={styles.officerAvailabilityFlag}>Available to help with Step {currentStep}</Text>
             </View>
@@ -299,11 +376,11 @@ export default function HomeScreen({ navigation }: any) {
             style={styles.officerLargeAvatarImagePremium} 
           />
           <View style={styles.officerDetailsTextGroup}>
-            <Text style={styles.officerCoreFullNamePremium}>Vikram Malhotra</Text>
+            <Text style={styles.officerCoreFullNamePremium}>{assignedFO}</Text>
             <View style={styles.seniorBadge}>
               <Text style={styles.seniorBadgeText}>SENIOR LOAN OFFICER</Text>
             </View>
-            <Text style={styles.officerRatingText}>⭐ 4.9/5 • 500+ Disbursals</Text>
+            <Text style={styles.officerRatingText}>Verified Officer • Direct Support</Text>
           </View>
         </View>
         
@@ -449,6 +526,12 @@ const styles = StyleSheet.create({
   
   // Inner Task Items Rows
   taskItemRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F8FAFC', padding: 12, borderRadius: 14, marginBottom: 10, borderWidth: 1, borderColor: '#E2E8F0' },
+  docItemRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' },
+  docMeta: { flex: 1 },
+  docName: { fontSize: 14, fontWeight: '700', color: '#1E293B' },
+  docStatus: { fontSize: 11, marginTop: 2, fontWeight: '600' },
+  docViewBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#F3E8FF', justifyContent: 'center', alignItems: 'center' },
+  docUploadBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#4B2C85', justifyContent: 'center', alignItems: 'center' },
   taskIconWrapper: { width: 36, height: 36, borderRadius: 10, justifyContent: 'center', alignItems: 'center' },
   taskMetaBlock: { flex: 1, marginLeft: 12 },
   taskTitleText: { fontSize: 14, fontWeight: '700', color: '#1E293B' },

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, ActivityIndicator } from 'react-native';
 import { Dropdown } from 'react-native-element-dropdown';
 import { Ionicons } from '@expo/vector-icons';
@@ -12,20 +12,32 @@ export const Step1BasicDetails = ({ onSave }: { onSave: (data: any) => Promise<v
   const [loading, setLoading] = useState(false);
   const [fullName, setFullName] = useState(storeData.fullName);
   const [email, setEmail] = useState(storeData.email);
-  const [city, setCity] = useState(storeData.city);
-  const [stateRegion, setStateRegion] = useState(storeData.stateRegion);
+  const [city, setCity] = useState(storeData.city || '');
+  const [stateCode, setStateCode] = useState(''); // Holds 'MH', 'KA' etc for filtering
+  const [stateRegion, setStateRegion] = useState(storeData.stateRegion || '');
   const [studyDestination, setStudyDestination] = useState(storeData.studyDestination);
 
   // Initialize phone numbers from store or default to one empty row
   const [phoneNumbers, setPhoneNumbers] = useState(
-    storeData.phones && storeData.phones.length > 0
-      ? storeData.phones.map((p: string, index: number) => ({
-          id: index,
-          code: p.length > 10 ? p.substring(0, p.length - 10) : '+91',
-          number: p.slice(-10)
-        }))
+    storeData.phones && Array.isArray(storeData.phones) && storeData.phones.length > 0
+      ? storeData.phones.map((p: string, index: number) => {
+          const phoneStr = p || '';
+          return {
+            id: index,
+            code: phoneStr.length > 10 ? phoneStr.substring(0, phoneStr.length - 10) : '+91',
+            number: phoneStr.slice(-10)
+          };
+        })
       : [{ id: Date.now(), code: '+91', number: '' }]
   );
+
+  // Perform reverse lookup on mount to populate stateCode from label
+  useEffect(() => {
+    const match = INDIAN_STATES.find(s => s.label === storeData.stateRegion);
+    if (match) {
+      setStateCode(match.value);
+    }
+  }, []);
 
   const addPhoneNumber = () => {
     setPhoneNumbers([...phoneNumbers, { id: Date.now(), code: '+91', number: '' }]);
@@ -42,7 +54,7 @@ export const Step1BasicDetails = ({ onSave }: { onSave: (data: any) => Promise<v
   };
 
   const handleSubmit = async () => {
-    const allPhonesValid = phoneNumbers.every(p => p.number.length >= 10);
+    const allPhonesValid = phoneNumbers.every(p => (p.number?.length || 0) >= 10);
     
     if (!fullName || !email || !city || !stateRegion || !studyDestination || !allPhonesValid) {
       Alert.alert("Required Fields Missing", "Please provide answers for all application fields.");
@@ -132,9 +144,10 @@ export const Step1BasicDetails = ({ onSave }: { onSave: (data: any) => Promise<v
         labelField="label"
         valueField="value"
         placeholder="Select State"
-        value={stateRegion}
+        value={stateCode}
         onChange={item => {
-          setStateRegion(item.value);
+          setStateCode(item.value);
+          setStateRegion(item.label); // Send full name to backend
           setCity(''); // Reset city when state changes
         }}
         disable={loading}
@@ -146,13 +159,13 @@ export const Step1BasicDetails = ({ onSave }: { onSave: (data: any) => Promise<v
         placeholderStyle={styles.placeholderStyle}
         selectedTextStyle={styles.selectedTextStyle}
         inputSearchStyle={styles.inputSearchStyle}
-        data={stateRegion ? (CITIES_BY_STATE[stateRegion] || []) : []}
+        data={stateCode ? (CITIES_BY_STATE[stateCode] || []) : []}
         maxHeight={300}
         labelField="label"
-        valueField="value"
-        placeholder={stateRegion ? "Select City" : "Select State First"}
+        valueField="label" // Send full city name to backend
+        placeholder={stateCode ? "Select City" : "Select State First"}
         value={city}
-        onChange={item => setCity(item.value)}
+        onChange={item => setCity(item.label)}
         disable={loading}
       />
 
