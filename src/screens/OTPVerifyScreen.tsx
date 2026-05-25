@@ -8,6 +8,7 @@ import { Colors } from '../theme/colors';
 import { Ionicons } from '@expo/vector-icons';
 import { useApplicationStore } from '../store/useApplicationStore';
 import { useLeadStore } from '../store/useLeadStore';
+import axios from 'axios';
 import { ENDPOINTS } from '../config/apiConfig';
 
 const OTPVerifyScreen = ({ navigation }: any) => {
@@ -53,10 +54,8 @@ const OTPVerifyScreen = ({ navigation }: any) => {
     if (!leadEmail) return;
     
     try {
-      await fetch(ENDPOINTS.RESEND_OTP, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: leadEmail })
+      await axios.post(ENDPOINTS.RESEND_OTP, { 
+        email: leadEmail.toLowerCase().trim() 
       });
       Alert.alert("Code Sent", "A new verification code has been sent to your email.");
     } catch (e) {
@@ -68,11 +67,11 @@ const OTPVerifyScreen = ({ navigation }: any) => {
    * OPTIMIZED ROUTING GUARD PIPELINE VERIFICATION HANDLER
    */
   const handleVerification = async () => {
-    const targetPhoneOtp = phoneOtp.join('');
     const targetEmailOtp = emailOtp.join('');
 
-    if (targetPhoneOtp.length < 6 || targetEmailOtp.length < 6) {
-      Alert.alert("Incomplete Entries", "Please completely populate all validation boxes before proceeding.");
+    // Only require the Email OTP as that is what the backend validates
+    if (targetEmailOtp.length < 6) {
+      Alert.alert("Incomplete Entry", "Please enter the 6-digit code sent to your email.");
       return;
     }
 
@@ -80,18 +79,14 @@ const OTPVerifyScreen = ({ navigation }: any) => {
 
     setLoading(true);
     try {
-      const response = await fetch(ENDPOINTS.VERIFY_OTP, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: leadEmail?.toLowerCase().trim(),
-          otp: targetEmailOtp // Using Email OTP for verification
-        })
+      const response = await axios.post(ENDPOINTS.VERIFY_OTP, {
+        email: leadEmail?.toLowerCase().trim(),
+        otp: targetEmailOtp
       });
       
-      const data = await response.json();
+      const data = response.data;
 
-      if (response.ok && data.leadID) {
+      if (data.leadID) {
         useApplicationStore.getState().hydrateFromBackend(data.fullProfile);
         
         navigation.replace('MainTabs');

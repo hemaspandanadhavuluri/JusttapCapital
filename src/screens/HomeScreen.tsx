@@ -29,13 +29,22 @@ export default function HomeScreen({ navigation }: any) {
   const isProfileComplete = useApplicationStore((state) => state.isProfileComplete);
   const leadId = useApplicationStore((state: any) => state.leadId || state.basicDetails?.leadId);
   const documents = useApplicationStore((state: any) => state.documents) || [];
+
+  // Extract FO info from the flattened store (populated via hydrateFromBackend)
+  const officerInfo = useApplicationStore((state: any) => state.serverData || {});
   
-  // Read dynamic data from store instead of hardcoded values
-  const serverData = useApplicationStore((state: any) => state.serverData) || {};
-  const localFullName = useApplicationStore((state: any) => state.basicDetails?.fullName);
-  const studentName = serverData.fullName || localFullName || 'Applicant';
-  const assignedFO = serverData.assignedFO || 'Assigning Officer...';
-  const leadStatus = serverData.leadStatus || 'New Application';
+  const studentName = useApplicationStore((state: any) => state.fullName || state.basicDetails?.fullName || 'Applicant');
+  const assignedFO = officerInfo.assignedFO || 'Assigning Officer...';
+  const assignedFOProfilePic = officerInfo.assignedFOProfilePic;
+  const assignedFOPhone = officerInfo.assignedFOPhone || '';
+  const leadStatus = useApplicationStore((state: any) => state.leadStatus || 'New Application');
+
+  const getAvatarSource = (picPath?: string) => {
+    if (!picPath) return null;
+    const normalized = picPath.replace(/\\/g, '/');
+    const baseUrl = API_BASE_URL.endsWith('/') ? API_BASE_URL.slice(0, -1) : API_BASE_URL;
+    return { uri: `${baseUrl}${normalized.startsWith('/') ? '' : '/'}${normalized}` };
+  };
 
   // Sync with database on mount to refresh status and FO details
   React.useEffect(() => {
@@ -43,7 +52,7 @@ export default function HomeScreen({ navigation }: any) {
       const refreshStatus = async () => {
         try {
           const res = await axios.get(ENDPOINTS.STATUS(leadId));
-          useApplicationStore.getState().updateStepData('serverData', res.data);
+          useApplicationStore.getState().hydrateFromBackend(res.data);
         } catch (e) {
           console.log("Status refresh failed", e);
         }
@@ -51,6 +60,34 @@ export default function HomeScreen({ navigation }: any) {
       refreshStatus();
     }
   }, [leadId]);
+
+  const handleCallFO = () => {
+    if (!assignedFOPhone) {
+      Alert.alert("Not Available", "The Field Officer's phone number is not yet updated.");
+      return;
+    }
+    Linking.openURL(`tel:${assignedFOPhone}`);
+  };
+
+  const handleWhatsAppFO = () => {
+    if (!assignedFOPhone) {
+      Alert.alert("Not Available", "The Field Officer's contact details are missing.");
+      return;
+    }
+    
+    // Ensure the number is formatted for International dialing (assuming +91 for India)
+    const cleanPhone = assignedFOPhone.replace(/\D/g, '');
+    const waNumber = cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone;
+    const url = `whatsapp://send?phone=${waNumber}&text=Hi ${assignedFO}, I have a query regarding my JusttapCapital loan application.`;
+    
+    Linking.canOpenURL(url).then(supported => {
+      if (supported) {
+        Linking.openURL(url);
+      } else {
+        Alert.alert("Error", "WhatsApp is not installed on this device.");
+      }
+    });
+  };
 
   // Fallback Theme Tokens to support missing color references safely
   const PRIMARY_COLOR = Colors?.primary || '#0A2540';
@@ -75,19 +112,16 @@ export default function HomeScreen({ navigation }: any) {
         setUploading(true);
         
         const formData = new FormData();
-        const fileUri = Platform.OS === 'android' ? file.uri : file.uri.replace('file://', '');
-
+        formData.append('documentType', docType);
+        formData.append('leadId', leadId);
+        
         formData.append('document', {
-          uri: fileUri,
+          uri: file.uri,
           name: file.name || `upload_${Date.now()}.pdf`,
           type: file.mimeType || 'application/octet-stream',
         } as any);
-        formData.append('documentType', docType);
 
-        // FIX: Ensure consistency with DocumentsScreen upload
-        const response = await axios.post(ENDPOINTS.UPLOAD_DOCUMENT(leadId), formData, {
-          transformRequest: (data) => data,
-        });
+        const response = await axios.post(ENDPOINTS.UPLOAD_DOCUMENT(leadId), formData);
 
         if (response.data) {
           useApplicationStore.getState().updateStepData('documents', response.data.documents || []);
@@ -307,23 +341,22 @@ export default function HomeScreen({ navigation }: any) {
         <Text style={styles.sectionDividerTitle}>Your Field Officer</Text>
         <View style={styles.officerProfileWidgetCard}>
           <View style={styles.officerMetaRow}>
-            <Image 
-              source={{ uri: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=120&q=80' }} 
-              style={styles.officerAvatarImage} 
-            />
+            <View style={[styles.officerAvatarImage, { justifyContent: 'center', alignItems: 'center', backgroundColor: '#F3E8FF' }]}>
+              <Ionicons name="person" size={24} color="#4B2C85" />
+            </View>
             <View style={styles.officerNameBlock}>
               <Text style={styles.officerNameText}>{assignedFO}</Text>
-              <Text style={styles.officerTitleSubtext}>Dedicated Field Executive</Text>
+              <Text style={styles.officerTitleSubtext}>{assignedFOPhone ? `Contact: ${assignedFOPhone}` : 'Dedicated Field Executive'}</Text>
               <Text style={styles.officerAvailabilityFlag}>Available to help with Step {currentStep}</Text>
             </View>
           </View>
           
           <View style={styles.officerActionRowGroup}>
-            <TouchableOpacity style={styles.btnCallNow}>
+            <TouchableOpacity style={styles.btnCallNow} onPress={handleCallFO}>
               <Ionicons name="call" size={16} color="#FFF" />
               <Text style={styles.btnCallNowText}>Call Now</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.btnMessage}>
+            <TouchableOpacity style={styles.btnMessage} onPress={handleWhatsAppFO}>
               <Feather name="message-square" size={16} color="#1E293B" />
               <Text style={styles.btnMessageText}>Message</Text>
             </TouchableOpacity>
@@ -371,16 +404,15 @@ export default function HomeScreen({ navigation }: any) {
       <Text style={styles.sectionDividerTitle}>Your Concierge Team</Text>
       <View style={styles.officerProfilePremiumCard}>
         <View style={styles.officerMetaRowLarge}>
-          <Image 
-            source={{ uri: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=200&q=80' }} 
-            style={styles.officerLargeAvatarImagePremium} 
-          />
+          <View style={[styles.officerLargeAvatarImagePremium, { justifyContent: 'center', alignItems: 'center', backgroundColor: '#F3E8FF' }]}>
+            <Ionicons name="person" size={32} color="#4B2C85" />
+          </View>
           <View style={styles.officerDetailsTextGroup}>
             <Text style={styles.officerCoreFullNamePremium}>{assignedFO}</Text>
             <View style={styles.seniorBadge}>
               <Text style={styles.seniorBadgeText}>SENIOR LOAN OFFICER</Text>
             </View>
-            <Text style={styles.officerRatingText}>Verified Officer • Direct Support</Text>
+          <Text style={styles.officerRatingText}>{assignedFOPhone ? `Direct Call: ${assignedFOPhone}` : 'Verified Officer • Direct Support'}</Text>
           </View>
         </View>
         
@@ -389,12 +421,12 @@ export default function HomeScreen({ navigation }: any) {
         </Text>
 
         <View style={styles.officerActionRowGroupLarge}>
-          <TouchableOpacity style={styles.officerLargeActionCallBtnPremium}>
+          <TouchableOpacity style={styles.officerLargeActionCallBtnPremium} onPress={handleCallFO}>
             <Ionicons name="call" size={18} color="#FFF" />
             <Text style={styles.officerLargeActionCallBtnText}>Call Now</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.officerLargeActionChatBtnPremium}>
+          <TouchableOpacity style={styles.officerLargeActionChatBtnPremium} onPress={handleWhatsAppFO}>
             <Ionicons name="chatbubble-ellipses" size={18} color="#4B2C85" />
             <Text style={styles.officerLargeActionChatBtnText}>Message</Text>
           </TouchableOpacity>
@@ -422,7 +454,7 @@ export default function HomeScreen({ navigation }: any) {
           </View>
           <View style={styles.timelineMetaContent}>
             <Text style={styles.timelineNodeTitle}>Bank Verification</Text>
-            <Text style={styles.timelineNodeTime}>Currently being reviewed by HDFC Credila</Text>
+            <Text style={styles.timelineNodeTime}>Currently being reviewed by our Fi</Text>
           </View>
         </View>
 

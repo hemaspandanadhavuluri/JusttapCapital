@@ -38,7 +38,7 @@ const handleSaveAndNext = async (storeKey: string, data: any) => {
     
     // Update store with the full object from server (contains assigned FO, etc.)
     if (response.data) {
-      useApplicationStore.getState().updateStepData('serverData', response.data);
+      useApplicationStore.getState().hydrateFromBackend(response.data);
     }
 
     if (currentStep === 9) {
