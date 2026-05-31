@@ -493,7 +493,7 @@ export default function HomeScreen({ navigation }: any) {
       <View style={styles.globalHeaderActionBar}>
         <View style={styles.globalHeaderBrandGroup}>
           <Image 
-            source={require('../../assets/logo.jpeg')} 
+            source={require('../../assets/logo.png')} 
             style={styles.logoSmall} 
             resizeMode="contain" 
           />

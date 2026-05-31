@@ -7,9 +7,20 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Colors } from '../theme/colors';
 import { PARTNER_BANKS } from '../components/forms/appConstants';
+import { useApplicationStore } from '../store/useApplicationStore';
 
 const LandingScreen = ({ navigation }: any) => {
   const insets = useSafeAreaInsets();
+  const leadId = useApplicationStore((state: any) => state.leadId || state.basicDetails?.leadId);
+
+  // Auto-login logic: If a leadId exists (meaning the user is registered/logged in),
+  // redirect them immediately to the MainTabs.
+  React.useEffect(() => {
+    if (leadId) {
+      // Use replace so the user cannot navigate back to the Landing screen
+      navigation.replace('MainTabs');
+    }
+  }, [leadId, navigation]);
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -25,7 +36,7 @@ const LandingScreen = ({ navigation }: any) => {
         {/* Brand Header */}
         <View style={styles.header}>
            <Image 
-             source={require('../../assets/logo.jpeg')} 
+             source={require('../../assets/logo.png')} 
              style={styles.logoSmall} 
              resizeMode="contain" 
            />

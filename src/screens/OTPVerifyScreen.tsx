@@ -95,6 +95,12 @@ const OTPVerifyScreen = ({ navigation }: any) => {
       }
     } catch (error: any) {
       console.log("Routing Guard Interaction Interruption caught safely:", error.message);
+      // DETAILED DEBUGGING LOG
+      if (error.response) {
+        console.error("OTP Error Details:", error.response.data);
+      } else {
+        console.error("OTP Network/Logic Error:", error.message);
+      }
       
       // READ EXISTING CLIENT STEP PERSISTENCE DATA
       const localSavedStep = useApplicationStore.getState().currentStep;

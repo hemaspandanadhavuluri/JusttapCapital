@@ -2,7 +2,7 @@
  * central API configuration
  * Replace this IP with your current machine IP or '10.0.2.2' if using Android Emulator
  */
-export const API_BASE_URL = 'https://justtapcapital.com';
+export const API_BASE_URL = 'http://10.130.71.17:5000'; // Example: 'http://
 
 export const ENDPOINTS = {
   REGISTER: `${API_BASE_URL}/api/app-onboarding/register`,
